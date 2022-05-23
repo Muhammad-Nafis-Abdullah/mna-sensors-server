@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
@@ -12,8 +13,26 @@ app.use(express.json());
 app.use(cors());
 
 
-// ------------------------------------------------
+const uri = `mongodb+srv://${process.env.DB_Admin}:${process.env.DB_Pass}@mna-sensors.4ipbl.mongodb.net/?retryWrites=true&w=majority`;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+async function run() {
+    try {
+        await client.connect();
+        const sensorsCollection = client.db('mnaSensors').collection('sensors');
+        
+        app.get('/sensors',async (req,res)=> {
+            const query = {};
+            const sensors = await sensorsCollection.find(query).toArray();
+            res.send(sensors);
+        })
 
+
+
+    } finally {
+
+    }
+}
+run().catch(console.dir);
 
 
 
