@@ -27,6 +27,14 @@ async function run() {
         })
 
 
+        app.get('/sensor/:id',async (req,res)=> {
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const sensor = await sensorsCollection.find(query).toArray();
+            res.send(sensor);
+        })
+
+
 
     } finally {
 
