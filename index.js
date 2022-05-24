@@ -40,6 +40,11 @@ async function run() {
             res.send(order);
         })
 
+        app.get('/orders/count',async (req,res)=> {
+            const orders = await orderCollection.find({}).toArray();
+            res.send({orders:orders.length});
+        })
+
 
     } finally {
 
