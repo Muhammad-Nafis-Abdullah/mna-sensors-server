@@ -36,8 +36,19 @@ async function run() {
 
         app.post('/order',async (req,res)=> {
             const order = req.body;
-            const inserted = await orderCollection.insertOne(order) ;
-            res.send(order);
+            // const inserted = await orderCollection.insertOne(order) ;
+            // res.send(order);
+            
+            const query = {
+                email: order.email,
+                productId: order.productId,
+            }
+            const exists = await orderCollection.findOne(query);
+            if (exists) {
+                return res.send({ success: false, order: exists });
+            }
+            const result = await orderCollection.insertOne(order);
+            return res.send({ success: true, result });
         })
 
         app.get('/orders/count',async (req,res)=> {
@@ -45,6 +56,23 @@ async function run() {
             res.send({orders:orders.length});
         })
 
+        app.put("/sensor/:id", async (req, res) => {
+            const orderId = req.params.id;
+            const updateQuantity = req.body;
+            const filter = { _id: ObjectId(orderId) };
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    availableQuantity: updateQuantity.remaniningQuantity,
+                },
+            };
+            const result = await sensorsCollection.updateOne(
+                filter,
+                updatedDoc,
+                options
+            );
+            res.send(result);
+        });
 
     } finally {
 
