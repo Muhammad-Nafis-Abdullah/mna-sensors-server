@@ -19,13 +19,13 @@ async function run() {
     try {
         await client.connect();
         const sensorsCollection = client.db('mnaSensors').collection('sensors');
+        const orderCollection = client.db('mnaSensors').collection('orders');
         
         app.get('/sensors',async (req,res)=> {
             const query = {};
             const sensors = await sensorsCollection.find(query).toArray();
             res.send(sensors);
         })
-
 
         app.get('/sensor/:id',async (req,res)=> {
             const id = req.params.id;
@@ -34,6 +34,11 @@ async function run() {
             res.send(sensor);
         })
 
+        app.post('/order',async (req,res)=> {
+            const order = req.body;
+            const inserted = await orderCollection.insertOne(order) ;
+            res.send(order);
+        })
 
 
     } finally {
