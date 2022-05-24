@@ -45,7 +45,19 @@ async function run() {
             }
             const exists = await orderCollection.findOne(query);
             if (exists) {
-                return res.send({ success: false, order: exists });
+                const options = { upsert: true };
+                const updatedDoc = {
+                    $set: {
+                        orderQuantity: exists.orderQuantity+order.orderQuantity,
+                        orderCost: exists.orderCost+order.orderCost
+                    },
+                };
+                const result = await orderCollection.updateOne(
+                    query,
+                    updatedDoc,
+                    options
+                );
+                return res.send({ update: true, result });
             }
             const result = await orderCollection.insertOne(order);
             return res.send({ success: true, result });
