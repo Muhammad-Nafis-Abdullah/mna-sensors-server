@@ -102,7 +102,15 @@ async function run() {
             }
             const result = await orderCollection.insertOne(order);
             return res.send({ success: true, result });
-        })
+        })        
+
+        //get an specific Order with Id
+        app.get("/order/:id", verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const order = await orderCollection.findOne(query);
+            res.send(order);
+        });
 
         // count total order
         app.get('/orders/count',async (req,res)=> {
@@ -139,7 +147,7 @@ async function run() {
             res.send(result);
         });
 
-        // add or update user information in db
+        // add or update user information
         app.put("/user/:email", async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -166,7 +174,7 @@ async function run() {
         } )
 
         // add or update an user review
-        app.post('/review/:email',async (req,res)=> {
+        app.put('/review/:email',async (req,res)=> {
             const email = req.params.email;
             const review = req.body;
             
