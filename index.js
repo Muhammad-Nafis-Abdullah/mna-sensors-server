@@ -25,22 +25,12 @@ const verifyJWT = (req, res, next) => {
             return res.status(403).send({ message: "Forbidden Access" });
         }
         req.decoded = decoded;
+        // console.log(req.decoded);
         next();
     });
 };
 
-//  admin verification
-const verifyAdmin = async (req, res, next) => {
-    const userEmail = req.decoded.email;
-    const user = await userCollection.findOne({
-        email: userEmail,
-    });
-    if (user.role === "admin") {
-        next();
-    } else {
-        res.status(403).send({ message: "Forbidden access" });
-    }
-};
+
 
 const uri = `mongodb+srv://${process.env.DB_Admin}:${process.env.DB_Pass}@mna-sensors.4ipbl.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -53,6 +43,22 @@ async function run() {
         const userCollection = client.db('mnaSensors').collection('users');
         const reviewCollection = client.db('mnaSensors').collection('reviews');
         const paymentCollection = client.db('mnaSensors').collection('payments');
+
+
+        //  admin verification
+        const verifyAdmin = async (req, res, next) => {
+            const userEmail = req.decoded.email;
+            // console.log(userEmail);
+            const user = await userCollection.findOne({
+                email: userEmail,
+            });
+            if (user.role === "admin") {
+                next();
+            } else {
+                res.status(403).send({ message: "Forbidden access" });
+            }
+        };
+
 
         // get all blogs
         app.get('/blogs',async (req,res)=> {
@@ -264,18 +270,18 @@ async function run() {
             res.send(result);
         });
 
-        // add a new to tool by an admin
-        app.post("/tool", verifyJWT, verifyAdmin, async (req, res) => {
-            const tool = req.body;
-            const result = await toolCollection.insertOne(tool);
+        // add a new sensor by admin
+        app.post("/sensor", verifyJWT, verifyAdmin, async (req, res) => {
+            const sensor = req.body;
+            const result = await sensorsCollection.insertOne(sensor);
             res.send(result);
         });
 
-        // delet a tool by an admin
-        app.delete("/tool/:id", verifyJWT, verifyAdmin, async (req, res) => {
-            const toolId = req.params.id;
-            const query = { _id: ObjectId(toolId) };
-            const result = await toolCollection.deleteOne(query);
+        // delete a sensor by an admin
+        app.delete("/sensor/:id", verifyJWT, verifyAdmin, async (req, res) => {
+            const sensorId = req.params.id;
+            const query = { _id: ObjectId(sensorId) };
+            const result = await sensorsCollection.deleteOne(query);
             res.send(result);
         });
 
