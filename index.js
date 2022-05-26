@@ -4,6 +4,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -12,6 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// token verification
 const verifyJWT = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -27,6 +29,19 @@ const verifyJWT = (req, res, next) => {
     });
 };
 
+//  admin verification
+const verifyAdmin = async (req, res, next) => {
+    const userEmail = req.decoded.email;
+    const user = await userCollection.findOne({
+        email: userEmail,
+    });
+    if (user.role === "admin") {
+        next();
+    } else {
+        res.status(403).send({ message: "Forbidden access" });
+    }
+};
+
 const uri = `mongodb+srv://${process.env.DB_Admin}:${process.env.DB_Pass}@mna-sensors.4ipbl.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 async function run() {
@@ -37,18 +52,21 @@ async function run() {
         const blogCollection = client.db('mnaSensors').collection('blogs');
         const userCollection = client.db('mnaSensors').collection('users');
         const reviewCollection = client.db('mnaSensors').collection('reviews');
-        
+
+        // get all blogs
         app.get('/blogs',async (req,res)=> {
             const blogs = await blogCollection.find({}).toArray();
             res.send(blogs);
         })
 
+        // get all sensors
         app.get('/sensors',async (req,res)=> {
             const query = {};
             const sensors = await sensorsCollection.find(query).toArray();
             res.send(sensors);
         })
 
+        // get a sensor information through id
         app.get('/sensor/:id',async (req,res)=> {
             const id = req.params.id;
             const query = {_id: ObjectId(id)};
@@ -56,6 +74,7 @@ async function run() {
             res.send(sensor);
         })
 
+        // purchase an order or update order quantity 
         app.post('/order',async (req,res)=> {
             const order = req.body;
             // const inserted = await orderCollection.insertOne(order) ;
@@ -85,11 +104,23 @@ async function run() {
             return res.send({ success: true, result });
         })
 
+        // count total order
         app.get('/orders/count',async (req,res)=> {
             const orders = await orderCollection.find({}).toArray();
             res.send({orders:orders.length});
         })
 
+        // get all the order of an user
+        app.get("/orders", verifyJWT, async (req, res) => {
+            const userEmail = req.query.email;
+
+            const query = { email: userEmail };
+            const cursor = orderCollection.find(query);
+            const orders = await cursor.toArray();
+            res.send(orders);
+        });
+
+        // update a sensor quantity through id
         app.put("/sensor/:id", async (req, res) => {
             const orderId = req.params.id;
             const updateQuantity = req.body;
@@ -108,6 +139,7 @@ async function run() {
             res.send(result);
         });
 
+        // add or update user information in db
         app.put("/user/:email", async (req, res) => {
             const email = req.params.email;
             const user = req.body;
@@ -127,11 +159,13 @@ async function run() {
             res.send({ result, accessToken });
         });
 
+        // total user count
         app.get('/users/count',async (req,res)=> {
             const userCount = await userCollection.find({}).toArray();
             res.send({usersNumber : userCount.length})
         } )
 
+        // add or update an user review
         app.post('/review/:email',async (req,res)=> {
             const email = req.params.email;
             const review = req.body;
@@ -159,6 +193,7 @@ async function run() {
             return res.send({ success: true, result });
         })
 
+        // get user review through email
         app.get('/review/:email',async (req,res)=> {
             const email = req.params.email;
             const review = await reviewCollection.findOne({email});
@@ -166,7 +201,7 @@ async function run() {
         })
 
     } finally {
-        
+
     }
 }
 run().catch(console.dir);
