@@ -36,6 +36,7 @@ async function run() {
         const orderCollection = client.db('mnaSensors').collection('orders');
         const blogCollection = client.db('mnaSensors').collection('blogs');
         const userCollection = client.db('mnaSensors').collection('users');
+        const reviewCollection = client.db('mnaSensors').collection('reviews');
         
         app.get('/blogs',async (req,res)=> {
             const blogs = await blogCollection.find({}).toArray();
@@ -131,8 +132,41 @@ async function run() {
             res.send({usersNumber : userCount.length})
         } )
 
-    } finally {
+        app.post('/review/:email',async (req,res)=> {
+            const email = req.params.email;
+            const review = req.body;
+            
+            const query = {
+                email: email,
+            }
+            const exists = await reviewCollection.findOne(query);
+            if (exists) {
+                const options = { upsert: true };
+                const updatedDoc = {
+                    $set: {
+                        comment: review.comment,
+                        rating: review.rating
+                    },
+                };
+                const result = await reviewCollection.updateOne(
+                    query,
+                    updatedDoc,
+                    options
+                );
+                return res.send({ update: true, result });
+            }
+            const result = await reviewCollection.insertOne(review);
+            return res.send({ success: true, result });
+        })
 
+        app.get('/review/:email',async (req,res)=> {
+            const email = req.params.email;
+            const review = await reviewCollection.findOne({email});
+            res.send(review);
+        })
+
+    } finally {
+        
     }
 }
 run().catch(console.dir);
