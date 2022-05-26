@@ -4,7 +4,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -52,6 +52,7 @@ async function run() {
         const blogCollection = client.db('mnaSensors').collection('blogs');
         const userCollection = client.db('mnaSensors').collection('users');
         const reviewCollection = client.db('mnaSensors').collection('reviews');
+        const paymentCollection = client.db('mnaSensors').collection('payments');
 
         // get all blogs
         app.get('/blogs',async (req,res)=> {
@@ -110,6 +111,23 @@ async function run() {
             const query = { _id: ObjectId(id) };
             const order = await orderCollection.findOne(query);
             res.send(order);
+        });
+
+        // update payment in order collection
+        app.patch("/order/:id", verifyJWT, async (req, res) => {
+            const orderId = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(orderId) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId,
+                },
+            };
+            const result = await paymentCollection.insertOne(payment);
+            const updateOrder = await orderCollection.updateOne(filter, updatedDoc);
+
+            res.send(updateOrder);
         });
 
         // count total order
@@ -173,6 +191,12 @@ async function run() {
             res.send({usersNumber : userCount.length})
         } )
 
+        // Getting All the User
+        app.get("/users", verifyJWT, async (req, res) => {
+            const users = await userCollection.find().toArray();
+            res.send(users);
+        });
+
         // add or update an user review
         app.put('/review/:email',async (req,res)=> {
             const email = req.params.email;
@@ -207,6 +231,53 @@ async function run() {
             const review = await reviewCollection.findOne({email});
             res.send(review);
         })
+
+        // add payment method
+        app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+            const order = req.body;
+            const totalPrice = order.orderCost;
+            const amount = totalPrice * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ["card"],
+            });
+            res.send({ clientSecret: paymentIntent.client_secret });
+        });
+
+        // get an admin
+        app.get("/admin/:email", async (req, res) => {
+            const email = req.params.email;
+            const user = await userCollection.findOne({ email: email });
+            const isAdmin = user.role === "admin";
+            res.send({ admin: isAdmin });
+        });
+
+        // add an user as an admin
+        app.patch("/user/:email", verifyJWT, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const updatedDoc = {
+                $set: { role: "admin" },
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
+        // add a new to tool by an admin
+        app.post("/tool", verifyJWT, verifyAdmin, async (req, res) => {
+            const tool = req.body;
+            const result = await toolCollection.insertOne(tool);
+            res.send(result);
+        });
+
+        // delet a tool by an admin
+        app.delete("/tool/:id", verifyJWT, verifyAdmin, async (req, res) => {
+            const toolId = req.params.id;
+            const query = { _id: ObjectId(toolId) };
+            const result = await toolCollection.deleteOne(query);
+            res.send(result);
+        });
 
     } finally {
 
