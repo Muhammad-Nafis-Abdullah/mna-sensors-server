@@ -238,6 +238,12 @@ async function run() {
             res.send(review);
         })
 
+        // get all reviews
+        app.get('/reviews',async (req,res)=> {
+            const review = await reviewCollection.find({}).toArray();
+            res.send(review);
+        })
+
         // add payment method
         app.post("/create-payment-intent", verifyJWT, async (req, res) => {
             const order = req.body;
