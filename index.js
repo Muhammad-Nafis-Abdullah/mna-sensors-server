@@ -47,12 +47,12 @@ async function run() {
 
         //  admin verification
         const verifyAdmin = async (req, res, next) => {
-            const userEmail = req.decoded.email;
+            const userEmail = req.decoded?.email;
             // console.log(userEmail);
             const user = await userCollection.findOne({
                 email: userEmail,
             });
-            if (user.role === "admin") {
+            if (user?.role === "admin") {
                 next();
             } else {
                 res.status(403).send({ message: "Forbidden access" });
@@ -288,6 +288,36 @@ async function run() {
             const sensorId = req.params.id;
             const query = { _id: ObjectId(sensorId) };
             const result = await sensorsCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        // get all order of all users
+        app.get("/get/orders",verifyJWT, verifyAdmin ,async (req, res) => {
+            const query = {};
+            const cursor = orderCollection.find(query);
+            const orders = await cursor.toArray();
+            res.send(orders);
+        });
+
+        // update order status by admin
+        app.put("/shift/order/:id",verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    shift: true,
+                },
+            };
+
+            const updateShift = await orderCollection.updateOne(filter, updatedDoc,{upsert:true});
+            res.send(updateShift);
+        });
+
+        // cancel an order by user
+        app.delete("/cancel/order/:id", verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await orderCollection.deleteOne(filter);
             res.send(result);
         });
 
