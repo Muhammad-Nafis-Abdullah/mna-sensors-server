@@ -318,7 +318,7 @@ async function run() {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await orderCollection.deleteOne(filter);
-            res.send(result);
+            res.send({result, deleted:true});
         });
 
     } finally {
