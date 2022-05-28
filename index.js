@@ -291,6 +291,13 @@ async function run() {
             res.send(result);
         });
 
+        // Getting Specific User
+        app.get("/user/:email", verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const users = await userCollection.findOne({ email: email });
+            res.send(users);
+        });
+
         // get all order of all users
         app.get("/get/orders",verifyJWT, verifyAdmin ,async (req, res) => {
             const query = {};
